@@ -1,0 +1,13 @@
+<!DOCTYPE HTML>
+<html> <head>
+<title>Show DOM</title>
+</head>
+
+<body>
+<ul>
+{% for page in pages %}
+  <li><a href="{% url "render.views.page" page %}">{{page}}</a></li>
+{% endfor %}
+</ul>
+</body>
+</html>

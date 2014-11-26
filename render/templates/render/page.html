@@ -1,0 +1,12 @@
+<!DOCTYPE HTML>
+<html> <head>
+<title>Show DOM</title>
+{% for headpiece in head %}
+{% if headpiece.type == "style" %}
+<link rel="stylesheet" href="{% url "render.views.static" app headpiece.href %}">
+{% endif %}
+{% endfor %}
+</head>
+
+{% for bodypiece in body %}{% if bodypiece.cssurl %}url(){% else %}{{ bodypiece | safe}}{% endif %}{% endfor %}
+</html>
