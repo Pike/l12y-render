@@ -6,7 +6,10 @@
 <body>
 <ul>
 {% for page in pages %}
-  <li><a href="{% url "render.views.page" page %}">{{page}}</a></li>
+  <li>
+    <a href="{% url "render.views.page" page %}">{{page}}</a>
+    <a href="{% url "render.views.screenshot" "master" page %}">screenshot</a>
+  </li>
 {% endfor %}
 </ul>
 </body>

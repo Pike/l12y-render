@@ -6,6 +6,9 @@ import os.path
 from django.conf import settings
 from django.shortcuts import render
 from django.http import HttpResponse, StreamingHttpResponse
+from django.views.generic import View
+
+import git
 
 def index(request):
     pages = []
@@ -24,7 +27,7 @@ def index(request):
 def page(request, path):
     path += '.pagedata'
     segs = path.split('/')
-    app = segs[0]
+    app = segs[1]
     filepath = os.path.join(settings.DOM_BASE_DIR, *segs)
     pagedata = json.load(open(filepath))
     return render(request, 'render/page.html', {
@@ -32,6 +35,57 @@ def page(request, path):
                   'body': pagedata['body'],
                   'app': app
                   })
+
+def screenshot(request, revision, path):
+    imgpath = path + '.en-US.png'
+    innerpath = path + '-inner.en-US.png'
+    repo = git.Repo(settings.DOM_BASE_DIR)
+    commit = repo.commit(revision)
+    tree = commit.tree
+    imgsha = tree[imgpath].hexsha
+    try:
+        innersha = tree[innerpath].hexsha
+    except KeyError:
+        innersha = None
+    try:
+        parent = commit.parents[0]
+    except IndexError:
+        parent = None
+    priorsha = priorinner = None
+    if parent:
+        diffs = tree.diff(parent, paths=[imgpath, innerpath])
+        for diff in diffs:
+            if diff.b_blob.path == imgpath:
+                priorsha = diff.b_blob.hexsha
+            if diff.b_blob.path == innerpath:
+                priorinner = diff.b_blob.hexsha
+    return render(request, 'render/screenshot.html', {
+                  'image': imgsha,
+                  'inner': innersha,
+                  'prior': priorsha,
+                  'priorinner': priorinner,
+                  })
+
+
+class ImageView(View):
+    def __init__(self, *args, **kwargs):
+        self.queue = []
+        View.__init__(self, *args, **kwargs)
+
+    def get(self, request, sha):
+        repo = git.Repo(settings.DOM_BASE_DIR)
+        blob = git.Blob.new(repo, sha)
+        blob.stream_data(self)
+        content_type, encoding = mimetypes.guess_type('foo.png')
+        content_type = content_type or 'application/octet-stream'
+        response = HttpResponse(''.join(self.queue),
+                                content_type=content_type)
+        return response
+
+    def write(self, data):
+        self.queue.append(data)
+
+image = ImageView.as_view()
 
 def static(request, app, path):
     fullpath = os.path.join(settings.GAIA_BUILD_DIR, app, *(path.split('/')))

@@ -1,0 +1,19 @@
+<!DOCTYPE HTML>
+<html> <head>
+<title>Show DOM</title>
+</head>
+
+<body>
+<img src="{% url "render.views.image" image %}">
+{% if prior %}
+<img src="{% url "render.views.image" prior %}">
+{% endif %}
+{% if inner %}
+<p>
+<img src="{% url "render.views.image" inner %}">
+{% if priorinner %}
+<img src="{% url "render.views.image" priorinner %}">
+{% endif %}
+{% endif %}
+</body>
+</html>
