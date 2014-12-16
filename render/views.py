@@ -10,6 +10,8 @@ from django.views.generic import View
 
 import git
 
+mimetypes.add_type('text/plain', '.properties')
+
 def index(request):
     pages = []
     for dir, dirs, files in os.walk(settings.DOM_BASE_DIR):
@@ -30,6 +32,14 @@ def page(request, path):
     app = segs[1]
     filepath = os.path.join(settings.DOM_BASE_DIR, *segs)
     pagedata = json.load(open(filepath))
+    # find and replace the theme app css
+    for headmatter in pagedata['head']:
+        headmatter['type_'] = headmatter['_type']
+        if headmatter['_type'] == 'style':
+            if headmatter['href'].startswith('app://theme'):
+                href = headmatter['href']
+                href = href.split('theme.gaiamobile.org', 1)[1]
+                headmatter['href'] = href
     return render(request, 'render/page.html', {
                   'head': pagedata['head'],
                   'body': pagedata['body'],
@@ -55,6 +65,8 @@ def screenshot(request, revision, path):
     if parent:
         diffs = tree.diff(parent, paths=[imgpath, innerpath])
         for diff in diffs:
+            if diff.new_file or diff.deleted_file:
+                continue
             if diff.b_blob.path == imgpath:
                 priorsha = diff.b_blob.hexsha
             if diff.b_blob.path == innerpath:
@@ -93,4 +105,26 @@ def static(request, app, path):
     content_type = content_type or 'application/octet-stream'
     response = StreamingHttpResponse(open(fullpath, 'rb'),
                                      content_type=content_type)
+    return response
+
+def l10n(request, app, path):
+    if 'shared/locales/branding/' in path:
+        # use official branding, and hardcode en-US.
+        realpath = path.rsplit('.', 2)[0] + '.en-US.properties'
+        realpath = realpath.replace('/branding/', '/branding/official/')
+        return static(request, app, realpath)
+    if '.en-US.' in path:
+        # load orig en-US files from build_stage
+        return static(request, app, path)
+    # munge path to work against hg
+    path = path.replace('locales/', '/')
+    base, loc, ext = path.rsplit('.', 2)
+    path = base + '.' + ext
+    if not path.startswith('/shared/'):
+        realpath = '/apps/' + app + '/' + path
+    else:
+        realpath = path
+    fullpath = os.path.join(settings.LOCALE_BASEDIR, loc, *(realpath.split('/')))
+    response = StreamingHttpResponse(open(fullpath, 'rb'),
+                                     content_type='text/plain; charset=utf-8')
     return response

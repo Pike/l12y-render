@@ -2,11 +2,16 @@
 <html> <head>
 <title>Show DOM</title>
 {% for headpiece in head %}
-{% if headpiece.type == "style" %}
+{% if headpiece.type_ == "style" %}
 <link rel="stylesheet" href="{% url "render.views.static" app headpiece.href %}">
 {% endif %}
+{% if headpiece.type_ == "l10n" %}
+<link rel="localization" href="{% url "render.views.l10n" app "/" %}{{ headpiece.href }}">
+{% endif %}
 {% endfor %}
+<script type="text/javascript" src="{% url "render.views.static" app "/shared/js/l10n.js" %}"></script>
+<script type="text/javascript" src="http://localhost:9001/static/js/pontoon.js"></script>
 </head>
 
-{% for bodypiece in body %}{% if bodypiece.cssurl %}url(){% else %}{{ bodypiece | safe}}{% endif %}{% endfor %}
+{% for bodypiece in body %}{% if bodypiece.cssurl %}url({% url "render.views.static" app bodypiece.cssurl %}){% else %}{{ bodypiece | safe}}{% endif %}{% endfor %}
 </html>
